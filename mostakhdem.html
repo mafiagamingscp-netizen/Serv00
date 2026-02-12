@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Server</title>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, push, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCn_JhHcx-OXd_zoxwGqSxIfIwrNLBBYgI",
+  authDomain: "error-13b42.firebaseapp.com",
+  databaseURL: "https://error-13b42-default-rtdb.firebaseio.com",
+  projectId: "error-13b42",
+  storageBucket: "error-13b42.firebasestorage.app",
+  messagingSenderId: "255234583788",
+  appId: "1:255234583788:web:bba2a1aba01d68b2c189c9"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+/* إنشاء يوزر ID ثابت */
+let userId = localStorage.getItem("userId");
+
+if(!userId){
+    userId = "user_" + Math.random().toString(36).substr(2,9);
+    localStorage.setItem("userId", userId);
+}
+
+document.addEventListener("DOMContentLoaded",()=>{
+    document.getElementById("uid").innerText = userId;
+});
+
+/* تسجيل المستخدم */
+set(ref(db, "users/" + userId), {
+    active: true
+});
+
+/* فتح صفحة الدفع */
+window.openPayment = function(){
+    document.getElementById("errorPage").style.display="none";
+    document.getElementById("paymentPage").style.display="block";
+}
+
+/* اختيار باقة */
+window.selectPlan = function(plan){
+    document.getElementById("selectedPlan").innerText = plan;
+}
+
+/* إرسال طلب دفع */
+window.confirmPayment = function(){
+
+    let sender = document.getElementById("senderNumber").value;
+    let plan = document.getElementById("selectedPlan").innerText;
+
+    if(sender === "" || plan === ""){
+        alert("اكمل البيانات");
+        return;
+    }
+
+    push(ref(db,"requests"),{
+        userId:userId,
+        plan:plan,
+        senderNumber:sender,
+        status:"pending",
+        time:Date.now()
+    });
+
+    alert("تم إرسال طلبك ✅ سيتم مراجعته");
+}
+
+/* استقبال إذاعة */
+onValue(ref(db,"broadcast"),(snapshot)=>{
+    const data = snapshot.val();
+    if(data){
+        document.getElementById("broadcast").innerText = data.message;
+    }
+});
+
+/* مراقبة التفعيل */
+onValue(ref(db,"users/"+userId),(snapshot)=>{
+    const data = snapshot.val();
+    if(data && data.active === false){
+        document.body.innerHTML = "<h1 style='color:red;text-align:center'>تم تعطيل حسابك</h1>";
+    }
+});
+
+</script>
+
+<style>
+body{
+    margin:0;
+    font-family:sans-serif;
+    background:#0f172a;
+    color:white;
+    text-align:center;
+    direction:rtl;
+}
+
+h1{color:#ef4444;font-size:80px;margin:0}
+
+button{
+    padding:10px 20px;
+    background:#22c55e;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    color:white;
+    margin:10px;
+}
+
+.option{
+    background:#1e293b;
+    padding:15px;
+    margin:10px;
+    border-radius:10px;
+    cursor:pointer;
+}
+
+.option:hover{background:#334155}
+
+input{
+    padding:10px;
+    width:80%;
+    margin-top:10px;
+    border-radius:8px;
+    border:none;
+}
+
+#paymentPage{display:none}
+</style>
+</head>
+
+<body>
+
+<!-- صفحة 404 -->
+<div id="errorPage">
+    <h1>404</h1>
+    <p>Server Not Found</p>
+    <button onclick="openPayment()">فتح سيرفر خاص</button>
+</div>
+
+<!-- صفحة الدفع -->
+<div id="paymentPage">
+
+    <h2>اختيار الباقة</h2>
+
+    <div class="option" onclick="selectPlan('6 سنوات - 75$ (3580 جنيه)')">
+        6 سنوات - 75$ (3580 جنيه)
+    </div>
+
+    <div class="option" onclick="selectPlan('مدى الحياة - 200$ (9850 جنيه)')">
+        مدى الحياة - 200$ (9850 جنيه)
+    </div>
+
+    <p id="selectedPlan" style="color:yellow"></p>
+
+    <h3>وسيلة الدفع</h3>
+    <p>Vodafone Cash / Orange Cash</p>
+
+    <p>رقم التحويل:</p>
+    <b>01210931358</b>
+
+    <br><br>
+
+    <input type="text" id="senderNumber" placeholder="رقم اللي حول منه أو TapTap">
+
+    <br>
+    <button onclick="confirmPayment()">تم الدفع</button>
+
+    <h3 style="margin-top:40px;color:orange">📢 إذاعة</h3>
+    <p id="broadcast"></p>
+
+    <hr style="margin:30px">
+
+    <p>🆔 User ID: <b id="uid"></b></p>
+
+</div>
+
+</body>
+</html>
